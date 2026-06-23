@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MewCode - Terminal AI Coding Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.5), 0 0 30px rgba(6, 182, 212, 0.3);
+        }
+
+        .glow-green {
+            text-shadow: 0 0 10px rgba(34, 197, 94, 0.8), 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        .terminal-window {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 40px rgba(6, 182, 212, 0.1);
+        }
+
+        .terminal-header {
+            background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
+            padding: 8px 12px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ef4444; }
+        .terminal-dot.yellow { background: #eab308; }
+        .terminal-dot.green { background: #22c55e; }
+
+        .terminal-body {
+            padding: 20px;
+            min-height: 200px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 18px;
+            background: #22c55e;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .animate-slideIn {
+            animation: slideIn 0.5s ease-out forwards;
+        }
+
+        .feature-card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+            border-color: #06b6d4;
+            box-shadow: 0 20px 40px -10px rgba(6, 182, 212, 0.2);
+        }
+
+        .tech-badge {
+            background: linear-gradient(135deg, #334155, #1e293b);
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .prompt {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .command-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #e2e8f0;
+            font-family: 'JetBrains Mono', monospace;
+            flex: 1;
+            font-size: 14px;
+        }
+
+        .nav-links a {
+            position: relative;
+            text-decoration: none;
+            color: #94a3b8;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #06b6d4;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #06b6d4;
+            transition: width 0.3s;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .scroll-indicator {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .code-snippet {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+        }
+
+        .keyword { color: #c084fc; }
+        .string { color: #f97316; }
+        .function { color: #38bdf8; }
+        .comment { color: #64748b; }
+    </style>
+</head>
+<body>
+    <nav class="fixed top-0 left-0 right-0 z-50 bg-slate-900/80 backdrop-blur-lg border-b border-slate-700">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-green-500 flex items-center justify-center">
+                        <i class="fas fa-terminal text-white text-xl"></i>
+                    </div>
+                    <span class="text-xl font-bold text-white">MewCode</span>
+                </div>
+                <div class="nav-links flex items-center gap-8">
+                    <a href="#features">Features</a>
+                    <a href="#demo">Demo</a>
+                    <a href="#about">About</a>
+                    <a href="#code">Code</a>
+                </div>
+                <button class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-green-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                    Get Started
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <section class="min-h-screen flex flex-col items-center justify-center px-6 pt-20">
+        <div class="max-w-4xl w-full animate-fadeIn">
+            <h1 class="text-5xl md:text-7xl font-bold text-center mb-6">
+                <span class="text-white">Meet </span>
+                <span class="glow-text text-cyan-400">MewCode</span>
+            </h1>
+            <p class="text-xl text-slate-400 text-center mb-12 max-w-2xl mx-auto">
+                Your intelligent terminal AI coding assistant. Build better software, faster.
+            </p>
+
+            <div class="terminal-window animate-slideIn" style="animation-delay: 0.3s;">
+                <div class="terminal-header">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <span class="text-slate-400 text-sm ml-4">mewcode@dev ~ </span>
+                </div>
+                <div class="terminal-body" id="terminalOutput">
+                    <div class="text-green-400 mb-2">Welcome to MewCode - Terminal AI Coding Assistant</div>
+                    <div class="text-slate-400 mb-4">Type 'help' for available commands</div>
+                    <div class="input-line">
+                        <span class="prompt">$</span>
+                        <span id="typingText"></span>
+                        <span class="cursor"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-8">
+                <a href="#features" class="scroll-indicator inline-block">
+                    <i class="fas fa-chevron-down text-slate-500 text-2xl"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="py-20 px-6">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
+                <span class="text-white">Core </span>
+                <span class="text-cyan-400">Features</span>
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="feature-card">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 flex items-center justify-center mb-4">
+                        <i class="fas fa-brain text-cyan-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">AI-Powered</h3>
+                    <p class="text-slate-400 text-sm">Intelligent code analysis and generation with cutting-edge language models.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500/20 to-green-500/5 flex items-center justify-center mb-4">
+                        <i class="fas fa-terminal text-green-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Terminal First</h3>
+                    <p class="text-slate-400 text-sm">Native terminal experience with keyboard shortcuts and quick commands.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/5 flex items-center justify-center mb-4">
+                        <i class="fas fa-cogs text-purple-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Extensible</h3>
+                    <p class="text-slate-400 text-sm">Plugin system with custom skills and tools integration.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-orange-500/20 to-orange-500/5 flex items-center justify-center mb-4">
+                        <i class="fas fa-shield text-orange-400 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-2">Secure</h3>
+                    <p class="text-slate-400 text-sm">Sandbox environment with permission controls for safe execution.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="demo" class="py-20 px-6 bg-slate-900/50">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
+                <span class="text-white">Live </span>
+                <span class="text-green-400">Demo</span>
+            </h2>
+
+            <div class="terminal-window">
+                <div class="terminal-header">
+                    <div class="terminal-dot red"></div>
+                    <div class="terminal-dot yellow"></div>
+                    <div class="terminal-dot green"></div>
+                    <span class="text-slate-400 text-sm ml-4">mewcode@demo ~ </span>
+                </div>
+                <div class="terminal-body min-h-[300px]" id="interactiveTerminal">
+                    <div class="text-green-400 mb-2">MewCode Demo Mode</div>
+                    <div class="text-slate-400 mb-4">Try typing commands below...</div>
+                    <div id="commandHistory"></div>
+                    <div class="input-line mt-4">
+                        <span class="prompt">$</span>
+                        <input type="text" id="commandInput" class="command-input" placeholder="Type 'help', 'explain', or 'write'">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="about" class="py-20 px-6">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
+                <span class="text-white">About </span>
+                <span class="text-cyan-400">Project</span>
+            </h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-4">What is MewCode?</h3>
+                    <p class="text-slate-400 mb-6">
+                        MewCode is a terminal-based AI coding assistant designed to help developers write better code, understand existing codebases, and automate repetitive tasks. Built with Python and the Textual framework, it provides a rich, interactive terminal interface.
+                    </p>
+                    <p class="text-slate-400">
+                        Whether you need help debugging, writing tests, or exploring code, MewCode is your intelligent companion in the terminal.
+                    </p>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-semibold text-white mb-4">Technology Stack</h3>
+                    <div class="flex flex-wrap gap-3">
+                        <span class="tech-badge">
+                            <i class="fab fa-python text-yellow-400"></i>
+                            Python 3.11+
+                        </span>
+                        <span class="tech-badge">
+                            <i class="fas fa-terminal text-green-400"></i>
+                            Textual
+                        </span>
+                        <span class="tech-badge">
+                            <i class="fab fa-openai text-blue-400"></i>
+                            OpenAI API
+                        </span>
+                        <span class="tech-badge">
+                            <i class="fas fa-cpu text-purple-400"></i>
+                            Anthropic
+                        </span>
+                        <span class="tech-badge">
+                            <i class="fab fa-github text-white"></i>
+                            Git
+                        </span>
+                        <span class="tech-badge">
+                            <i class="fas fa-shield text-red-400"></i>
+                            Pydantic
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="code" class="py-20 px-6 bg-slate-900/50">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">
+                <span class="text-white">Quick </span>
+                <span class="text-green-400">Start</span>
+            </h2>
+
+            <div class="code-snippet mb-8">
+                <pre><code><span class="comment"># Install MewCode</span>
+<span class="keyword">pip</span> install mewcode
+
+<span class="comment"># Run the assistant</span>
+<span class="keyword">mewcode</span></code></pre>
+            </div>
+
+            <div class="code-snippet">
+                <pre><code><span class="keyword">from</span> <span class="string">mewcode</span> <span class="keyword">import</span> Agent
+
+<span class="keyword">async</span> <span class="function">def</span> <span class="keyword">main</span>():
+    agent = Agent()
+    result = <span class="keyword">await</span> agent.run(<span class="string">"Explain this code"</span>)
+    <span class="keyword">print</span>(result)</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <footer class="py-12 px-6 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto text-center">
+            <div class="flex items-center justify-center gap-3 mb-4">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-green-500 flex items-center justify-center">
+                    <i class="fas fa-terminal text-white"></i>
+                </div>
+                <span class="text-lg font-bold text-white">MewCode</span>
+            </div>
+            <p class="text-slate-500 text-sm">Terminal AI Coding Assistant</p>
+            <div class="flex items-center justify-center gap-6 mt-4">
+                <a href="#" class="text-slate-400 hover:text-cyan-400 transition-colors">
+                    <i class="fab fa-github"></i>
+                </a>
+                <a href="#" class="text-slate-400 hover:text-cyan-400 transition-colors">
+                    <i class="fab fa-twitter"></i>
+                </a>
+                <a href="#" class="text-slate-400 hover:text-cyan-400 transition-colors">
+                    <i class="fab fa-linkedin"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const typingTexts = [
+            'mewcode --help',
+            'mewcode analyze main.py',
+            'mewcode fix bug.py',
+            'mewcode write test'
+        ];
+
+        let textIndex = 0;
+        let charIndex = 0;
+        const typingElement = document.getElementById('typingText');
+
+        function typeText() {
+            if (charIndex < typingTexts[textIndex].length) {
+                typingElement.textContent += typingTexts[textIndex].charAt(charIndex);
+                charIndex++;
+                setTimeout(typeText, 50);
+            } else {
+                setTimeout(deleteText, 1500);
+            }
+        }
+
+        function deleteText() {
+            if (charIndex > 0) {
+                typingElement.textContent = typingElement.textContent.slice(0, -1);
+                charIndex--;
+                setTimeout(deleteText, 30);
+            } else {
+                textIndex = (textIndex + 1) % typingTexts.length;
+                setTimeout(typeText, 500);
+            }
+        }
+
+        setTimeout(typeText, 1000);
+
+        const commandInput = document.getElementById('commandInput');
+        const commandHistory = document.getElementById('commandHistory');
+
+        const responses = {
+            'help': `Available commands:
+  help          - Show this help message
+  explain       - Explain code or concepts
+  write         - Write code for you
+  analyze       - Analyze codebase
+  debug         - Debug your code
+  test          - Write tests`,
+            'explain': `I can explain any code or programming concept!
+Try asking: "Explain recursion" or "Explain async/await"`,
+            'write': `What code would you like me to write?
+Examples:
+- "Write a Python function to reverse a string"
+- "Write a React component for a todo list"
+- "Write a shell script to backup files"`,
+            'hello': `Hello! I'm MewCode, your terminal AI coding assistant.
+How can I help you today?`,
+            'default': `Unknown command. Type 'help' for available commands.`
+        };
+
+        commandInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const command = commandInput.value.trim();
+                if (command) {
+                    const commandLine = document.createElement('div');
+                    commandLine.innerHTML = `<span class="prompt">$</span> <span class="text-white">${command}</span>`;
+                    commandHistory.appendChild(commandLine);
+
+                    const response = responses[command.toLowerCase()] || responses['default'];
+                    const responseLines = response.split('\n');
+                    
+                    responseLines.forEach((line, index) => {
+                        setTimeout(() => {
+                            const responseLine = document.createElement('div');
+                            responseLine.className = 'text-slate-400 mt-1';
+                            responseLine.textContent = line;
+                            commandHistory.appendChild(responseLine);
+                        }, index * 100);
+                    });
+
+                    commandInput.value = '';
+                    commandHistory.scrollTop = commandHistory.scrollHeight;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
